@@ -632,8 +632,8 @@ header{
 body.has-custom-bg{background-color:transparent!important}body.has-custom-bg>*:not(#customBgVideo):not(#customBgShade){position:relative;z-index:1}
 body.has-custom-bg-image{background-size:cover!important;background-position:center!important;background-attachment:fixed!important}
 /* Spotify-inspired SVG music player */
-.music-player{position:fixed;left:14px;right:14px;bottom:14px;z-index:90;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:10px 12px;background:rgba(8,10,14,.96);color:#fff;border:2px solid #050505;box-shadow:8px 8px 0 #050505;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transform:translateY(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.34,1.4,.64,1),opacity .25s ease}
-.music-player.is-ready{transform:translateY(0);opacity:1;pointer-events:auto}
+.music-player{position:fixed;left:14px;right:14px;bottom:86px;z-index:90;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:10px 12px;background:rgba(8,10,14,.96);color:#fff;border:2px solid #050505;box-shadow:8px 8px 0 #050505;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transform:translateY(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.34,1.4,.64,1),opacity .25s ease}
+.music-player.is-ready{transform:translateY(0);opacity:1;pointer-events:auto} .music-player[aria-hidden='true']{display:none}
 .music-cover{width:54px;height:54px;flex:none;border:2px solid #fff;background:#145cff center/cover no-repeat;display:grid;place-items:center;box-shadow:4px 4px 0 #145cff}
 .music-cover svg{width:22px;height:22px}
 .music-meta{min-width:0}
@@ -654,7 +654,7 @@ body.has-custom-bg-image{background-size:cover!important;background-position:cen
 .music-volume{display:flex;align-items:center;gap:5px;margin-left:3px}
 .music-volume input{width:72px;accent-color:var(--neo-blue,#145cff)}
 @media(max-width:600px){
-  .music-player{left:8px;right:8px;bottom:8px;grid-template-columns:auto 1fr;gap:11px;padding:9px 10px}
+  .music-player{left:8px;right:8px;bottom:78px;grid-template-columns:auto 1fr;gap:9px;padding:8px 9px}
   .music-cover{width:48px;height:48px}
   .music-controls{grid-column:2;justify-content:flex-start;margin-top:-5px}
   .music-btn{width:31px;height:31px}
@@ -1022,8 +1022,12 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
       if(musicAudio.dataset.src!==wanted){
         musicAudio.pause();
         musicAudio.dataset.src=wanted;
+        musicAudio.pause();
+        musicAudio.removeAttribute('src');
         musicAudio.src=wanted;
         musicAudio.load();
+        if(musicProgressFill)musicProgressFill.style.width='0%';
+        if(musicTime)musicTime.textContent='0:00 / 0:00';
         setPlayIcon(false);
       }
     }else{
@@ -1050,6 +1054,9 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
     log('music gagal diputar (media error '+code+')','err');
   });
   musicAudio?.addEventListener('canplay',()=>log('music siap diputar','ok'));
+  musicAudio?.addEventListener('canplaythrough',()=>setPlayIcon(false));
+  musicAudio?.addEventListener('stalled',()=>log('music loading terhenti — cek URL/file','err'));
+  musicAudio?.addEventListener('abort',()=>log('music dibatalkan browser','err'));
   musicAudio?.addEventListener('play',()=>setPlayIcon(true));
   musicAudio?.addEventListener('pause',()=>setPlayIcon(false));
   musicAudio?.addEventListener('ended',()=>{musicAudio.currentTime=0;setPlayIcon(false)});
@@ -1153,7 +1160,7 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
         if((sub==='wa'||sub==='whatsapp'||sub==='tiktok')&&validUrl(url)){await apply(sub==='tiktok'?'tiktok':'wa',url);log((isGlobal?'global ':'')+sub+' link updated','ok')}
         else log('usage: link wa <url> | link tiktok <url>','err')
       }
-      else if((actual==='background'||actual==='bg')&&(actualArg==='reset'||validUrl(actualArg))){await apply('bg',actualArg==='reset'?'':actualArg);log((isGlobal?'global ':'')+(actualArg==='reset'?'background reset':(isVideoUrl(actualArg)?'background video updated':'background image updated')),'ok')}
+      else if((actual==='background'||actual==='bg'||actual==='baground'||actual==='backround')&&(actualArg==='reset'||validUrl(actualArg))){await apply('bg',actualArg==='reset'?'':actualArg);log((isGlobal?'global ':'')+(actualArg==='reset'?'background reset':(isVideoUrl(actualArg)?'background video updated':'background image updated')),'ok')}
       else if(actual==='music'){
         const value=actualArg.trim();
         if(value==='reset'||validUrl(value)){await apply('musicUrl',value==='reset'?'':value);log((isGlobal?'global ':'')+(value==='reset'?'music reset':'music URL updated'),'ok')}
@@ -1181,7 +1188,7 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
         log('logo <image-url> | logo reset');
         log('qr <image-url> | qr reset');
         log('link wa <url> | link tiktok <url>');
-        log('background <image-or-video-url> | background reset');
+        log('background <image-or-video-url> | baground <url> | background reset');
         log('music <mp3-url> | music reset');
         log('title <text> | artist <text> | cover <image-url>');
         log('status | clear | reset');
