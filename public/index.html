@@ -666,7 +666,7 @@ body.has-custom-bg-image{background-size:cover!important;background-position:cen
 </style>
 <script>document.documentElement.classList.add('hld','lk');window._f=setTimeout(()=>document.documentElement.classList.remove('hld','lk'),12000)</script>
 </head>
-<body id="top"><video id="customBgVideo" playsinline autoplay loop muted></video><div id="customBgShade" aria-hidden="true"></div>
+<body id="top"><video id="customBgVideo" playsinline autoplay loop muted preload="auto"></video><div id="customBgShade" aria-hidden="true"></div>
 <svg width="0" height="0" style="position:absolute"><defs>
 <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></symbol>
 <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="3"/><path d="M5 15V6a2 2 0 012-2h8"/></symbol>
@@ -750,7 +750,7 @@ body.has-custom-bg-image{background-size:cover!important;background-position:cen
     <div class="music-progress-fill" id="musicProgressFill"></div>
     <span class="music-time" id="musicTime">0:00 / 0:00</span>
   </div>
-  <audio id="raaaAudio" preload="metadata"></audio>
+  <audio id="raaaAudio" preload="auto" playsinline></audio>
 </section>
 
 <main>
@@ -995,7 +995,14 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
   let settings={...defaults},globalSettings={...defaults};
   try{settings={...settings,...JSON.parse(localStorage.getItem(storeKey)||'{}')}}catch{}
   const validUrl=v=>{try{const u=new URL(v,location.href);return ['http:','https:','data:','blob:'].includes(u.protocol)||v.startsWith('/')}catch{return false}};
-  const isVideoUrl=v=>/\.(mp4|webm|ogg)(?:[?#].*)?$/i.test((v||'').split('?')[0])||/^(https?:\/\/)/i.test(v||'')&&/(video|\.m3u8)(?:[?#]|$)/i.test(v||'');
+  const isVideoUrl=v=>{
+    const x=String(v||'').trim();
+    return /\.(mp4|webm|ogv|ogg)(?:[?#].*)?$/i.test(x) || /\.m3u8(?:[?#].*)?$/i.test(x) || /^data:video\//i.test(x);
+  };
+  const isAudioUrl=v=>{
+    const x=String(v||'').trim();
+    return /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)(?:[?#].*)?$/i.test(x) || /^data:audio\//i.test(x) || /^https?:\/\//i.test(x);
+  };
 
   const musicAudio=document.querySelector('#raaaAudio'),musicPlayer=document.querySelector('#musicPlayer');
   const musicTitle=document.querySelector('#musicTitle'),musicArtist=document.querySelector('#musicArtist'),musicCover=document.querySelector('#musicCover');
@@ -1009,11 +1016,40 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
     musicPlayer?.classList.toggle('is-ready',has);
     if(musicTitle)musicTitle.textContent=settings.musicTitle||'raaa music';
     if(musicArtist)musicArtist.textContent=settings.musicArtist||'Unknown artist';
-    if(musicCover)musicCover.style.backgroundImage=settings.musicCover?`url("${settings.musicCover.replace(/"/g,'')}")`:'';
-    if(has && musicAudio.src!==new URL(settings.musicUrl,location.href).href){musicAudio.src=settings.musicUrl;musicAudio.load()}
-    if(!has){musicAudio.pause();musicAudio.removeAttribute('src');setPlayIcon(false)}
+    if(musicCover){musicCover.style.backgroundImage=settings.musicCover?`url(\"${String(settings.musicCover).replace(/\"/g,'')}\")`:'';}
+    if(has){
+      const wanted=String(settings.musicUrl).trim();
+      if(musicAudio.dataset.src!==wanted){
+        musicAudio.pause();
+        musicAudio.dataset.src=wanted;
+        musicAudio.src=wanted;
+        musicAudio.load();
+        setPlayIcon(false);
+      }
+    }else{
+      musicAudio.pause();
+      musicAudio.dataset.src='';
+      musicAudio.removeAttribute('src');
+      musicAudio.load();
+      setPlayIcon(false);
+    }
   };
-  musicPlay?.addEventListener('click',async()=>{if(!settings.musicUrl)return;try{if(musicAudio.paused)await musicAudio.play();else musicAudio.pause()}catch{}});
+  musicPlay?.addEventListener('click',async()=>{
+    if(!settings.musicUrl)return;
+    try{
+      if(musicAudio.paused){
+        const p=musicAudio.play();
+        if(p&&typeof p.then==='function')await p;
+      }else musicAudio.pause();
+    }catch(err){
+      log('music error: '+(err?.message||'browser gagal memutar audio'),'err');
+    }
+  });
+  musicAudio?.addEventListener('error',()=>{
+    const code=musicAudio.error?.code||0;
+    log('music gagal diputar (media error '+code+')','err');
+  });
+  musicAudio?.addEventListener('canplay',()=>log('music siap diputar','ok'));
   musicAudio?.addEventListener('play',()=>setPlayIcon(true));
   musicAudio?.addEventListener('pause',()=>setPlayIcon(false));
   musicAudio?.addEventListener('ended',()=>{musicAudio.currentTime=0;setPlayIcon(false)});
@@ -1043,12 +1079,36 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
     document.body.classList.remove('has-custom-bg','has-custom-bg-image');
     if(bgVideo){
       if(settings.bg && isVideoUrl(settings.bg)){
-        bgVideo.src=safe(settings.bg);bgVideo.style.display='block';if(shade)shade.style.display='block';
-        document.body.style.backgroundImage='none';document.body.classList.add('has-custom-bg');bgVideo.play().catch(()=>{});
+        const wanted=safe(settings.bg);
+        bgVideo.style.display='block';
+        bgVideo.muted=true;
+        bgVideo.defaultMuted=true;
+        bgVideo.setAttribute('muted','');
+        bgVideo.setAttribute('playsinline','');
+        bgVideo.setAttribute('autoplay','');
+        bgVideo.setAttribute('loop','');
+        if(bgVideo.dataset.src!==wanted){
+          bgVideo.dataset.src=wanted;
+          bgVideo.src=wanted;
+          bgVideo.load();
+        }
+        if(shade)shade.style.display='block';
+        document.body.style.backgroundImage='none';
+        document.body.classList.add('has-custom-bg');
+        const tryPlay=()=>bgVideo.play().catch(()=>{});
+        tryPlay();
+        bgVideo.addEventListener('loadeddata',tryPlay,{once:true});
       }else{
-        bgVideo.pause();bgVideo.removeAttribute('src');bgVideo.load();bgVideo.style.display='none';if(shade)shade.style.display='none';
-        document.body.style.backgroundImage=settings.bg?`url("${safe(settings.bg)}")`:'';
-        document.body.style.backgroundSize=settings.bg?'cover':'';document.body.style.backgroundAttachment=settings.bg?'fixed':'';document.body.style.backgroundPosition=settings.bg?'center':'';
+        bgVideo.pause();
+        bgVideo.dataset.src='';
+        bgVideo.removeAttribute('src');
+        bgVideo.load();
+        bgVideo.style.display='none';
+        if(shade)shade.style.display='none';
+        document.body.style.backgroundImage=settings.bg?`url(\"${safe(settings.bg)}\")`:'';
+        document.body.style.backgroundSize=settings.bg?'cover':'';
+        document.body.style.backgroundAttachment=settings.bg?'fixed':'';
+        document.body.style.backgroundPosition=settings.bg?'center':'';
         if(settings.bg)document.body.classList.add('has-custom-bg','has-custom-bg-image');
       }
     }
