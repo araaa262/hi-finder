@@ -626,6 +626,11 @@ header{
   .go{width:100%}
 }
 
+/* Custom background layer: image OR video URL */
+#customBgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;display:none;pointer-events:none}
+#customBgShade{position:fixed;inset:0;background:rgba(255,255,255,.72);z-index:0;display:none;pointer-events:none}
+body.has-custom-bg{background-color:transparent!important}body.has-custom-bg>*:not(#customBgVideo):not(#customBgShade){position:relative;z-index:1}
+body.has-custom-bg-image{background-size:cover!important;background-position:center!important;background-attachment:fixed!important}
 /* Spotify-inspired SVG music player */
 .music-player{position:fixed;left:14px;right:14px;bottom:14px;z-index:90;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:10px 12px;background:rgba(8,10,14,.96);color:#fff;border:2px solid #050505;box-shadow:8px 8px 0 #050505;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transform:translateY(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.34,1.4,.64,1),opacity .25s ease}
 .music-player.is-ready{transform:translateY(0);opacity:1;pointer-events:auto}
@@ -661,7 +666,7 @@ header{
 </style>
 <script>document.documentElement.classList.add('hld','lk');window._f=setTimeout(()=>document.documentElement.classList.remove('hld','lk'),12000)</script>
 </head>
-<body id="top">
+<body id="top"><video id="customBgVideo" playsinline autoplay loop muted></video><div id="customBgShade" aria-hidden="true"></div>
 <svg width="0" height="0" style="position:absolute"><defs>
 <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></symbol>
 <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="3"/><path d="M5 15V6a2 2 0 012-2h8"/></symbol>
@@ -704,7 +709,7 @@ header{
       <div class="theme-custom"><label for="themeColor">CUSTOM PRIMARY</label><input id="themeColor" type="color" value="#145cff" aria-label="Pilih warna utama"></div>
       <div class="web-terminal" style="margin-top:10px">
         <div class="web-terminal-bar"><i></i><i></i><i></i><span class="web-terminal-title">theme-terminal</span></div>
-        <div class="web-terminal-out" id="themeTerminalOut"><div class="ok">raaa@web:~$ help</div><div>ra theme · ra color · ra logo · ra modal · ra link · ra background · ra status · ra clear · ra reset</div></div>
+        <div class="web-terminal-out" id="themeTerminalOut"><div class="ok">web@terminal:~$ help</div><div>theme · color · logo · modal · link · background · status · music · clear · reset</div></div>
         <form class="web-terminal-form" id="themeTerminalForm"><span>&gt;_</span><input id="themeTerminal" autocomplete="off" spellcheck="false" placeholder="theme pink" aria-label="Perintah theme"></form>
       </div>
     </div>
@@ -722,7 +727,7 @@ header{
   <div class="music-meta">
     <div class="music-kicker">NOW PLAYING</div>
     <div class="music-title" id="musicTitle">raaa music</div>
-    <div class="music-artist" id="musicArtist">Set a music URL with ra music</div>
+    <div class="music-artist" id="musicArtist">Set a music URL with music</div>
   </div>
   <div class="music-controls">
     <button class="music-btn" id="musicPrev" type="button" aria-label="Previous">
@@ -963,7 +968,7 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
 })();
 </script>
 <script>
-/* Live theme/settings controller — `ra` is local, hidden `raa` is global. */
+/* Live theme/settings controller — local commands are plain; `global` applies to everyone. */
 (()=>{
   const root=document.documentElement;
   const presets={
@@ -989,7 +994,8 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
   const defaults={logo:'',modal:'qris.png',wa:'https://whatsapp.com/channel/0029VbDPWOjFMqrdmBdXu82R',tiktok:'https://www.tiktok.com/@ancklo',bg:'',musicUrl:'',musicTitle:'raaa music',musicArtist:'Unknown artist',musicCover:''};
   let settings={...defaults},globalSettings={...defaults};
   try{settings={...settings,...JSON.parse(localStorage.getItem(storeKey)||'{}')}}catch{}
-  const validUrl=v=>{try{const u=new URL(v,location.href);return ['http:','https:','data:'].includes(u.protocol)||v.startsWith('/')}catch{return false}};
+  const validUrl=v=>{try{const u=new URL(v,location.href);return ['http:','https:','data:','blob:'].includes(u.protocol)||v.startsWith('/')}catch{return false}};
+  const isVideoUrl=v=>/\.(mp4|webm|ogg)(?:[?#].*)?$/i.test((v||'').split('?')[0])||/^(https?:\/\/)/i.test(v||'')&&/(video|\.m3u8)(?:[?#]|$)/i.test(v||'');
 
   const musicAudio=document.querySelector('#raaaAudio'),musicPlayer=document.querySelector('#musicPlayer');
   const musicTitle=document.querySelector('#musicTitle'),musicArtist=document.querySelector('#musicArtist'),musicCover=document.querySelector('#musicCover');
@@ -1020,13 +1026,32 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
   musicNext?.addEventListener('click',()=>{if(musicAudio.duration)musicAudio.currentTime=0;musicAudio.play().catch(()=>{})});
 
   const applySettings=save=>{
+    const safe=v=>String(v||'').replace(/"/g,'');
     const logo=document.querySelector('.logo .sq');
-    if(logo){logo.style.backgroundImage=settings.logo?`url("${settings.logo.replace(/"/g,'')}")`:'';logo.style.backgroundSize='cover';logo.style.backgroundPosition='center';logo.style.backgroundRepeat='no-repeat';if(settings.logo)logo.innerHTML='';else logo.innerHTML='<svg width="20" height="20"><use href="#i-search"/></svg>'}
-    const qr=document.querySelector('.qr img');if(qr&&settings.modal)qr.src=settings.modal;
-    const links=document.querySelectorAll('a[href*="whatsapp.com/channel"],a[data-global-link="whatsapp"]');links.forEach(a=>a.href=settings.wa);
-    const tt=document.querySelector('a[href*="tiktok.com/@ancklo"],a[data-global-link="tiktok"]');if(tt)tt.href=settings.tiktok;
-    document.body.style.backgroundImage=settings.bg?`url("${settings.bg.replace(/"/g,'')}")`:'';
-    document.body.style.backgroundSize=settings.bg?'cover':'';document.body.style.backgroundAttachment=settings.bg?'fixed':'';document.body.style.backgroundPosition=settings.bg?'center':'';
+    if(logo){
+      logo.style.backgroundImage=settings.logo?`url("${safe(settings.logo)}")`:'';
+      logo.style.backgroundSize='cover';logo.style.backgroundPosition='center';logo.style.backgroundRepeat='no-repeat';
+      if(settings.logo)logo.innerHTML='';else logo.innerHTML='<svg width="20" height="20"><use href="#i-search"/></svg>';
+    }
+    document.querySelectorAll('.qr img,[data-qr-image]').forEach(img=>{
+      img.src=settings.modal||defaults.modal;
+      img.onerror=()=>{img.onerror=null;img.src=defaults.modal};
+    });
+    document.querySelectorAll('a[href*="whatsapp.com/channel"],a[data-global-link="whatsapp"]').forEach(a=>a.href=settings.wa);
+    document.querySelectorAll('a[href*="tiktok.com/@ancklo"],a[data-global-link="tiktok"]').forEach(a=>a.href=settings.tiktok);
+    const bgVideo=document.querySelector('#customBgVideo'),shade=document.querySelector('#customBgShade');
+    document.body.classList.remove('has-custom-bg','has-custom-bg-image');
+    if(bgVideo){
+      if(settings.bg && isVideoUrl(settings.bg)){
+        bgVideo.src=safe(settings.bg);bgVideo.style.display='block';if(shade)shade.style.display='block';
+        document.body.style.backgroundImage='none';document.body.classList.add('has-custom-bg');bgVideo.play().catch(()=>{});
+      }else{
+        bgVideo.pause();bgVideo.removeAttribute('src');bgVideo.load();bgVideo.style.display='none';if(shade)shade.style.display='none';
+        document.body.style.backgroundImage=settings.bg?`url("${safe(settings.bg)}")`:'';
+        document.body.style.backgroundSize=settings.bg?'cover':'';document.body.style.backgroundAttachment=settings.bg?'fixed':'';document.body.style.backgroundPosition=settings.bg?'center':'';
+        if(settings.bg)document.body.classList.add('has-custom-bg','has-custom-bg-image');
+      }
+    }
     renderMusic();
     if(save)localStorage.setItem(storeKey,JSON.stringify(settings));
   };
@@ -1062,21 +1087,20 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
         else {setTheme(actualArg);if(!isGlobal)localStorage.setItem('raaa-theme',actualArg)}
         log((isGlobal?'global':'local')+' '+actual+' applied','ok');
       } else if(actual==='logo'&&(actualArg==='reset'||validUrl(actualArg))){await apply('logo',actualArg==='reset'?'':actualArg);log((isGlobal?'global ':'')+(actualArg==='reset'?'logo reset':'logo updated'),'ok')}
-      else if(actual==='modal'&&(actualArg==='reset'||validUrl(actualArg))){await apply('modal',actualArg==='reset'?defaults.modal:actualArg);log((isGlobal?'global ':'')+'modal updated','ok')}
+      else if((actual==='modal'||actual==='qr'||actual==='qris')&&(actualArg==='reset'||validUrl(actualArg))){await apply('modal',actualArg==='reset'?defaults.modal:actualArg);log((isGlobal?'global ':'')+'qr updated','ok')}
       else if(actual==='link'){
         const p=actualArg.split(/\s+/),sub=(p.shift()||'').toLowerCase(),url=p.join(' ').trim();
         if((sub==='wa'||sub==='whatsapp'||sub==='tiktok')&&validUrl(url)){await apply(sub==='tiktok'?'tiktok':'wa',url);log((isGlobal?'global ':'')+sub+' link updated','ok')}
         else log('usage: link wa <url> | link tiktok <url>','err')
       }
-      else if(actual==='background'&&(actualArg==='reset'||validUrl(actualArg))){await apply('bg',actualArg==='reset'?'':actualArg);log((isGlobal?'global ':'')+(actualArg==='reset'?'background reset':'background updated'),'ok')}
+      else if((actual==='background'||actual==='bg')&&(actualArg==='reset'||validUrl(actualArg))){await apply('bg',actualArg==='reset'?'':actualArg);log((isGlobal?'global ':'')+(actualArg==='reset'?'background reset':(isVideoUrl(actualArg)?'background video updated':'background image updated')),'ok')}
       else if(actual==='music'){
-        const p=actualArg.split(/\s+/),sub=(p.shift()||'').toLowerCase(),value=p.join(' ').trim();
-        if((!sub||sub==='url')&&(value==='reset'||validUrl(value))){await apply('musicUrl',value==='reset'?'':value);log((isGlobal?'global ':'')+(value==='reset'?'music reset':'music URL updated'),'ok')}
-        else if(sub==='title'&&value){await apply('musicTitle',value);log((isGlobal?'global ':'')+'music title updated','ok')}
-        else if(sub==='artist'&&value){await apply('musicArtist',value);log((isGlobal?'global ':'')+'music artist updated','ok')}
-        else if(sub==='cover'&&(value==='reset'||validUrl(value))){await apply('musicCover',value==='reset'?'':value);log((isGlobal?'global ':'')+'music cover updated','ok')}
-        else log('usage: music <mp3-url> | music title <text> | music artist <text> | music cover <image-url>','err')
+        const value=actualArg.trim();
+        if(value==='reset'||validUrl(value)){await apply('musicUrl',value==='reset'?'':value);log((isGlobal?'global ':'')+(value==='reset'?'music reset':'music URL updated'),'ok')}
+        else log('usage: music <mp3-url> | music reset','err')
       }
+      else if(['title','artist'].includes(actual)&&actualArg){await apply(actual==='title'?'musicTitle':'musicArtist',actualArg);log((isGlobal?'global ':'')+actual+' updated','ok')}
+      else if(actual==='cover'&&(actualArg==='reset'||validUrl(actualArg))){await apply('musicCover',actualArg==='reset'?'':actualArg);log((isGlobal?'global ':'')+'cover updated','ok')}
       else if(actual==='status'&&!isGlobal){log('scope: local');log('theme: '+(document.querySelector('#themeName')?.textContent||'unknown'));log('logo: '+(settings.logo?'custom':'default'));log('modal: '+(settings.modal?'custom/default':'none'));log('background: '+(settings.bg?'custom':'default'))}
       else if(actual==='clear'&&!isGlobal){out.innerHTML=''}
       else if(actual==='reset'){
@@ -1095,18 +1119,13 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
         log('theme blue | pink | purple | lime | orange');
         log('color #RRGGBB');
         log('logo <image-url> | logo reset');
-        log('modal <image-url> | modal reset');
+        log('qr <image-url> | qr reset');
         log('link wa <url> | link tiktok <url>');
-        log('background <image-url> | background reset');
+        log('background <image-or-video-url> | background reset');
         log('music <mp3-url> | music reset');
-        log('music title <text> | artist <text> | cover <image-url>');
+        log('title <text> | artist <text> | cover <image-url>');
         log('status | clear | reset');
-        log('global logo <image-url> | global logo reset');
-        log('global modal <image-url> | global modal reset');
-        log('global link wa <url> | global link tiktok <url>');
-        log('global background <image-url> | global background reset');
-        log('global music <mp3-url> | global music reset');
-        log('global music title <text> | artist <text> | cover <image-url>');
+        log('global <command> <value>');
       }
       else log('command not found — type help','err')
     }catch(err){log((isGlobal?'global ':'')+'update failed: '+err.message,'err')}
