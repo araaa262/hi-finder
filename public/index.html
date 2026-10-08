@@ -627,9 +627,9 @@ header{
 }
 
 /* Custom background layer: image OR video URL */
-#customBgVideo{position:fixed;inset:0;width:100vw;height:100dvh;height:100vh;object-fit:contain;object-position:center center;background:#000;z-index:0;display:none;pointer-events:none}
+#customBgVideo{position:fixed;inset:0;width:100vw;height:100dvh;height:100vh;object-fit:cover;object-position:center center;background:#000;z-index:0;display:none;pointer-events:none}
 #customBgShade{position:fixed;inset:0;background:rgba(255,255,255,.30);z-index:0;display:none;pointer-events:none}
-#bgSoundBtn{position:fixed;right:14px;bottom:82px;z-index:9999;display:none;width:48px;height:48px;border:2px solid #050505;background:#145cff;color:#fff;box-shadow:4px 4px 0 #050505;align-items:center;justify-content:center;cursor:pointer}
+#bgSoundBtn{display:none!important}
 #bgSoundBtn svg{width:24px;height:24px}
 #bgSoundBtn.on{background:#d9ff00;color:#050505}
 @media(max-width:600px){#bgSoundBtn{right:12px;bottom:74px;width:44px;height:44px}}
@@ -637,7 +637,7 @@ body.has-custom-bg{background-color:#000!important}body.has-custom-bg>*:not(#cus
 body.has-custom-bg-image{background-size:cover!important;background-position:center!important;background-attachment:fixed!important}
 body.has-custom-bg header{z-index:130!important}
 body.has-custom-bg .mw{z-index:140!important}
-@media(max-width:600px){#customBgVideo{width:100vw;height:100dvh;height:100vh;object-fit:contain;object-position:center center}}
+@media(max-width:600px){#customBgVideo{width:100vw;height:100dvh;height:100vh;object-fit:cover;object-position:center center}}
 </style>
 <script>document.documentElement.classList.add('hld','lk');window._f=setTimeout(()=>document.documentElement.classList.remove('hld','lk'),12000)</script>
 </head>
@@ -971,7 +971,35 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
     v.muted=true;v.defaultMuted=true;v.setAttribute('muted','');bgAudioEnabled=false;setBgSoundUI(false);
   };
   bgSoundBtn?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();bgAudioEnabled?disableBackgroundAudio():enableBackgroundAudio()});
-  ['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(!bgAudioEnabled)enableBackgroundAudio();},{passive:true}));
+  // Start silent on every fresh load. The first real interaction may enable the video's own audio.
+  let userActivated=false;
+  const activateBgAudio=()=>{
+    if(userActivated)return;
+    userActivated=true;
+    enableBackgroundAudio();
+    ['pointerdown','touchend','keydown'].forEach(ev=>document.removeEventListener(ev,activateBgAudio));
+  };
+  ['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,activateBgAudio,{passive:true,once:false}));
+  // When the tab/app is sent to the desktop/background, stop and mute the video.
+  // Returning to the page starts it again silently, matching a fresh visit.
+  document.addEventListener('visibilitychange',()=>{
+    const v=document.querySelector('#customBgVideo');
+    if(!v||!settings.bg||!isVideoUrl(settings.bg))return;
+    if(document.hidden){
+      v.pause();
+      v.muted=true;
+      v.defaultMuted=true;
+      v.setAttribute('muted','');
+      bgAudioEnabled=false;
+    }else{
+      userActivated=false;
+      v.muted=true;
+      v.defaultMuted=true;
+      v.setAttribute('muted','');
+      v.play().catch(()=>{});
+      setBgSoundUI(false);
+    }
+  });
 
   const applySettings=save=>{
     const safe=v=>String(v||'').replace(/"/g,'');
@@ -1008,9 +1036,10 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
         if(shade)shade.style.display='block';
         document.body.style.backgroundImage='none';
         document.body.classList.add('has-custom-bg');
-        const tryPlay=()=>{bgVideo.muted=true;bgVideo.setAttribute('muted','');bgVideo.play().catch(()=>{});setBgSoundUI(bgAudioEnabled)};
+        const tryPlay=()=>{bgVideo.muted=true;bgVideo.defaultMuted=true;bgVideo.setAttribute('muted','');bgVideo.play().catch(()=>{});setBgSoundUI(false)};
         tryPlay();
         bgVideo.addEventListener('loadeddata',tryPlay,{once:true});
+        setBgSoundUI(false);
       }else{
         bgVideo.pause();
         bgAudioEnabled=false;
@@ -1099,6 +1128,8 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
   });
   const saved=localStorage.getItem('raaa-theme');if(saved&&(presets[saved]||/^#[0-9a-f]{6}$/i.test(saved)))setTheme(saved,false);
   applySettings(false);loadGlobal();
+  // Fresh page load is always silent.
+  setTimeout(()=>{const v=document.querySelector('#customBgVideo');if(v&&settings.bg&&isVideoUrl(settings.bg)){v.muted=true;v.defaultMuted=true;v.setAttribute('muted','');v.play().catch(()=>{});bgAudioEnabled=false;setBgSoundUI(false)}},0);
 })();
 </script>
 </body>
