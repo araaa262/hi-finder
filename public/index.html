@@ -47,7 +47,7 @@ header{position:sticky;top:0;z-index:30;background:rgba(11,11,12,.9);backdrop-fi
 .bur i:first-child{transform:translateY(-4px)}.bur i:last-child{transform:translateY(4px)}
 #mb.open .bur i:first-child{transform:rotate(45deg)}#mb.open .bur i:last-child{transform:rotate(-45deg)}
 #mb{transition:background .25s,transform .15s}#mb:active{transform:scale(.94)}#mb.open{background:var(--s3)}
-.mw{position:absolute;top:100%;left:50%;width:100%;max-width:768px;transform:translateX(-50%);padding:0 20px;display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;transition:grid-template-rows .5s cubic-bezier(.16,1,.3,1),opacity .3s ease,visibility 0s linear .5s}
+.mw{position:absolute;z-index:120;top:100%;left:50%;width:100%;max-width:768px;transform:translateX(-50%);padding:0 20px;display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;transition:grid-template-rows .5s cubic-bezier(.16,1,.3,1),opacity .3s ease,visibility 0s linear .5s}
 .mw.open{grid-template-rows:1fr;opacity:1;visibility:visible;transition:grid-template-rows .5s cubic-bezier(.16,1,.3,1),opacity .3s ease,visibility 0s}
 .mw>div{overflow:hidden;min-height:0}
 .mw nav{margin-bottom:14px;background:var(--s);border-radius:20px;padding:8px;box-shadow:var(--d3s);border:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:4px;transform:translateY(-10px);transition:transform .5s cubic-bezier(.16,1,.3,1)}
@@ -628,9 +628,12 @@ header{
 
 /* Custom background layer: image OR video URL */
 #customBgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;display:none;pointer-events:none}
-#customBgShade{position:fixed;inset:0;background:rgba(255,255,255,.72);z-index:0;display:none;pointer-events:none}
+#customBgShade{position:fixed;inset:0;background:rgba(255,255,255,.48);z-index:0;display:none;pointer-events:none}
 body.has-custom-bg{background-color:transparent!important}body.has-custom-bg>*:not(#customBgVideo):not(#customBgShade){position:relative;z-index:1}
 body.has-custom-bg-image{background-size:cover!important;background-position:center!important;background-attachment:fixed!important}
+body.has-custom-bg header{z-index:130!important}
+body.has-custom-bg .mw{z-index:140!important}
+body.has-custom-bg .music-player{z-index:90!important}
 /* Spotify-inspired SVG music player */
 .music-player{position:fixed;left:14px;right:14px;bottom:86px;z-index:90;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:10px 12px;background:rgba(8,10,14,.96);color:#fff;border:2px solid #050505;box-shadow:8px 8px 0 #050505;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transform:translateY(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.34,1.4,.64,1),opacity .25s ease}
 .music-player.is-ready{transform:translateY(0);opacity:1;pointer-events:auto} .music-player[aria-hidden='true']{display:none}
