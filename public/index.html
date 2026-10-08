@@ -657,7 +657,7 @@ body.has-custom-bg .music-player{z-index:90!important}
 .music-volume{display:flex;align-items:center;gap:5px;margin-left:3px}
 .music-volume input{width:72px;accent-color:var(--neo-blue,#145cff)}
 @media(max-width:600px){
-  .music-player{left:8px;right:8px;bottom:78px;grid-template-columns:auto 1fr;gap:9px;padding:8px 9px}
+  .music-player{left:8px;right:8px;bottom:calc(92px + env(safe-area-inset-bottom));grid-template-columns:auto 1fr;gap:9px;padding:8px 9px}
   .music-cover{width:48px;height:48px}
   .music-controls{grid-column:2;justify-content:flex-start;margin-top:-5px}
   .music-btn{width:31px;height:31px}
@@ -1022,12 +1022,13 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
     if(musicCover){musicCover.style.backgroundImage=settings.musicCover?`url(\"${String(settings.musicCover).replace(/\"/g,'')}\")`:'';}
     if(has){
       const wanted=String(settings.musicUrl).trim();
-      if(musicAudio.dataset.src!==wanted){
+      const mediaSrc=/^(https?:\/\/)/i.test(wanted)?('/api/media?url='+encodeURIComponent(wanted)):wanted;
+      if(musicAudio.dataset.src!==mediaSrc){
         musicAudio.pause();
-        musicAudio.dataset.src=wanted;
+        musicAudio.dataset.src=mediaSrc;
         musicAudio.pause();
         musicAudio.removeAttribute('src');
-        musicAudio.src=wanted;
+        musicAudio.src=mediaSrc;
         musicAudio.load();
         if(musicProgressFill)musicProgressFill.style.width='0%';
         if(musicTime)musicTime.textContent='0:00 / 0:00';
@@ -1054,7 +1055,7 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
   });
   musicAudio?.addEventListener('error',()=>{
     const code=musicAudio.error?.code||0;
-    log('music gagal diputar (media error '+code+')','err');
+    log('music gagal diputar (media error '+code+') — cek file/URL','err');
   });
   musicAudio?.addEventListener('canplay',()=>log('music siap diputar','ok'));
   musicAudio?.addEventListener('canplaythrough',()=>setPlayIcon(false));
@@ -1090,6 +1091,7 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
     if(bgVideo){
       if(settings.bg && isVideoUrl(settings.bg)){
         const wanted=safe(settings.bg);
+        const mediaSrc=/^(https?:\/\/)/i.test(wanted)?('/api/media?url='+encodeURIComponent(wanted)):wanted;
         bgVideo.style.display='block';
         bgVideo.muted=true;
         bgVideo.defaultMuted=true;
@@ -1097,9 +1099,9 @@ addEventListener('keydown',e=>e.key==='Escape'&&close());
         bgVideo.setAttribute('playsinline','');
         bgVideo.setAttribute('autoplay','');
         bgVideo.setAttribute('loop','');
-        if(bgVideo.dataset.src!==wanted){
-          bgVideo.dataset.src=wanted;
-          bgVideo.src=wanted;
+        if(bgVideo.dataset.src!==mediaSrc){
+          bgVideo.dataset.src=mediaSrc;
+          bgVideo.src=mediaSrc;
           bgVideo.load();
         }
         if(shade)shade.style.display='block';
